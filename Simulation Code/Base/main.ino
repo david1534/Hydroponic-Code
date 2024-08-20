@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <Base.h>
 
+Base Base()
+
 void setup() 
 {
   Serial.begin(9600); // Start the serial communication with the computer
