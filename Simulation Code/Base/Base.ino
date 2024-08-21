@@ -44,5 +44,4 @@ void loop()
   checkWaterLevel(waterLevelA, waterLevelB, waterLevelC); // Check the current water level
   checkPumpStatus(currentTime, elapsedTime, currentPumpTime, elapsedPumpTime, 
   waterLevelA, waterLevelB, waterLevelC); // Check and update the pump status
-  
 }
