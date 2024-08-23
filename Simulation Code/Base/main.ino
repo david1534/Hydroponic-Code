@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <Base.h>
+#include "Base.h"
 
 Base Base()
 
@@ -21,7 +21,7 @@ void loop()
   int waterLevelA, waterLevelB, waterLevelC; // Variables to store the current water level
   unsigned long currentTime, elapsedTime, currentPumpTime, elapsedPumpTime; // Variables to store the current time and elapsed time
 
-  checkWaterLevel(waterLevelA, waterLevelB, waterLevelC); // Check the current water level
-  checkPumpStatus(currentTime, elapsedTime, currentPumpTime, elapsedPumpTime, 
+  base.checkWaterLevel(waterLevelA, waterLevelB, waterLevelC); // Check the current water level
+  base.checkPumpStatus(currentTime, elapsedTime, currentPumpTime, elapsedPumpTime, 
   waterLevelA, waterLevelB, waterLevelC); // Check and update the pump status
 }
