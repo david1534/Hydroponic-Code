@@ -7,15 +7,13 @@ extern unsigned long previousTime;
 extern unsigned long previousPumpTime;
 extern int PumpPWM;
 extern bool pumpStatus;
-extern const int WaterLevelD;
-extern const int WaterPump;
 extern const unsigned long pumpTimeOn;
 extern const unsigned long pumpTimeOff;
 extern const unsigned long stabilityTime;
 
-void checkPumpStatus(unsigned long &currentTime, unsigned long &elapsedTime, 
-                     unsigned long &currentPumpTime, unsigned long &elapsedPumpTime, 
-                     int waterLevelA, int waterLevelB, int waterLevelC) 
+void checkPumpStatus(unsigned long currentTime, unsigned long elapsedTime, 
+                     unsigned long currentPumpTime, unsigned long elapsedPumpTime, 
+                     int waterLevelA, int waterLevelB, int waterLevelC, int waterLevelD, int WaterPump) 
 {
     currentTime = millis(); // Get the current time
     elapsedTime = currentTime - previousTime; // Calculate how much time has passed since the last water level check
@@ -23,9 +21,9 @@ void checkPumpStatus(unsigned long &currentTime, unsigned long &elapsedTime,
     elapsedPumpTime = currentPumpTime - previousPumpTime; // Calculate how much time has passed since the last pump status check
 
     if (waterLevelC == LOW) {
-        digitalWrite(WaterLevelD, HIGH);
+        digitalWrite(waterLevelD, HIGH);
         delay(300);
-        digitalWrite(WaterLevelD, LOW);
+        digitalWrite(waterLevelD, LOW);
         delay(300);
         PumpPWM = 0;
         analogWrite(WaterPump, PumpPWM);

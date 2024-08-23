@@ -38,10 +38,10 @@ void setup()
 
 void loop() 
 {
-  int waterLevelA, waterLevelB, waterLevelC; // Variables to store the current water level
+  int waterLevelA, waterLevelB, waterLevelC, waterLevelD; // Variables to store the current water level
   unsigned long currentTime, elapsedTime, currentPumpTime, elapsedPumpTime; // Variables to store the current time and elapsed time
 
   checkWaterLevel(waterLevelA, waterLevelB, waterLevelC); // Check the current water level
   checkPumpStatus(currentTime, elapsedTime, currentPumpTime, elapsedPumpTime, 
-  waterLevelA, waterLevelB, waterLevelC); // Check and update the pump status
+  waterLevelA, waterLevelB, waterLevelC, waterLevelD, WaterPump); // Check and update the pump status
 }
