@@ -2,4 +2,4 @@
 .vscode
 
 # This is the build folder needed for running the simulation code in SimulIDE
-build/
+build/arduino.avr.uno/
