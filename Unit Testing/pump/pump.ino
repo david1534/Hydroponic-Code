@@ -1,5 +1,6 @@
 #include <Arduino.h>
 
+//Initialize Water Pump Pin
 const int pumpPin = 11; 
 int pumpPWM = 0; // PWM value for controlling pump speed
 
