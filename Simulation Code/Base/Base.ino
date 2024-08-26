@@ -1,7 +1,6 @@
 #include <Arduino.h>
 
-// Define the pins for the water level sensors and other components
-//
+// Define the pins for the sensors and components
 const int WaterLevelA = 4;
 const int WaterLevelB = 5;
 const int WaterLevelC = 6;
@@ -16,17 +15,7 @@ struct WaterLevelSensors {
     int pinB;
     int pinC;
 
-    void begin() {
-        pinMode(pinA, INPUT);
-        pinMode(pinB, INPUT);
-        pinMode(pinC, INPUT);
-    }
-
-    void readLevels(int &levelA, int &levelB, int &levelC) {
-        levelA = digitalRead(pinA);
-        levelB = digitalRead(pinB);
-        levelC = digitalRead(pinC);
-    }
+    WaterLevelSensors(int a, int b, int c) : pinA(a), pinB(b), pinC(c) {}
 };
 
 // Define a structure for fan control
@@ -37,24 +26,6 @@ struct Fans {
     int state;
 
     Fans(int aPin, int bPin) : pinA(aPin), pinB(bPin), previousTime(0), state(0) {}
-
-    void begin() {
-        pinMode(pinA, OUTPUT);
-        pinMode(pinB, OUTPUT);
-        previousTime = millis();
-    }
-
-    void update(unsigned long currentTime) {
-        const unsigned long intervals[] = {1000, 1000, 1000, 3000}; // FanA, FanB, Both, Off
-        const int outputs[][2] = {{HIGH, LOW}, {LOW, HIGH}, {HIGH, HIGH}, {LOW, LOW}};
-
-        if (currentTime - previousTime >= intervals[state]) {
-            digitalWrite(pinA, outputs[state][0]);
-            digitalWrite(pinB, outputs[state][1]);
-            state = (state + 1) % 4;
-            previousTime = currentTime;
-        }
-    }
 };
 
 // Define a structure for water pump control
@@ -68,71 +39,104 @@ struct WaterPumpController {
     const unsigned long pumpTimeOff;
     const unsigned long pumpTimeOn;
 
-    WaterPumpController(int p) 
-        : pin(p), pumpPWM(0), pumpStatus(false), previousTime(0), previousPumpTime(0), 
+    WaterPumpController(int p)
+        : pin(p), pumpPWM(0), pumpStatus(false), previousTime(0), previousPumpTime(0),
           stabilityTime(1000), pumpTimeOff(1000), pumpTimeOn(5000) {}
-
-    void begin() {
-        pinMode(pin, OUTPUT);
-        previousTime = millis();
-        previousPumpTime = millis();
-    }
-
-    void updatePumpStatus(unsigned long currentTime, int waterLevelA, int waterLevelB, int waterLevelC, int waterLevelD) {
-        unsigned long elapsedTime = currentTime - previousTime;
-        unsigned long elapsedPumpTime = currentTime - previousPumpTime;
-
-        if (waterLevelC == LOW) {
-            digitalWrite(WaterLevelD, HIGH);
-            // Cycle WaterLevelD
-            if (elapsedTime % 600 < 300) {
-                digitalWrite(WaterLevelD, HIGH);
-            } else {
-                digitalWrite(WaterLevelD, LOW);
-            }
-            pumpPWM = 0;
-            analogWrite(pin, pumpPWM);
-        } else if (pumpStatus && (elapsedPumpTime <= pumpTimeOn)) {
-            if (waterLevelA == HIGH && elapsedTime >= stabilityTime) {
-                pumpPWM = 255;
-            } else if (waterLevelB == HIGH && elapsedTime >= stabilityTime) {
-                pumpPWM = 170;
-            } else if (waterLevelC == HIGH && elapsedTime >= stabilityTime) {
-                pumpPWM = 85;
-            } else if (waterLevelC == LOW && elapsedTime >= stabilityTime) {
-                pumpPWM = 0;
-            }
-            analogWrite(pin, pumpPWM);
-            previousTime = currentTime;
-        } else if (elapsedPumpTime >= pumpTimeOn) {
-            digitalWrite(pin, LOW);
-            pumpStatus = false;
-            previousPumpTime = currentTime;
-        } else if (elapsedPumpTime >= pumpTimeOff) {
-            analogWrite(pin, pumpPWM);
-            pumpStatus = true;
-            previousPumpTime = currentTime;
-        }
-    }
 };
 
-// Instantiate structures for each component
-WaterLevelSensors waterLevelSensors = {WaterLevelA, WaterLevelB, WaterLevelC};
-Fans fans = {FanA, FanB};
-WaterPumpController waterPumpController = {WaterPump};
+// Initialize the water level sensors
+void beginWaterLevelSensors(WaterLevelSensors &sensors) {
+    pinMode(sensors.pinA, INPUT);
+    pinMode(sensors.pinB, INPUT);
+    pinMode(sensors.pinC, INPUT);
+}
+
+// Read water levels from sensors
+void readWaterLevels(WaterLevelSensors &sensors, int &levelA, int &levelB, int &levelC) {
+    levelA = digitalRead(sensors.pinA);
+    levelB = digitalRead(sensors.pinB);
+    levelC = digitalRead(sensors.pinC);
+}
+
+// Initialize the fans
+void beginFans(Fans &fans) {
+    pinMode(fans.pinA, OUTPUT);
+    pinMode(fans.pinB, OUTPUT);
+    fans.previousTime = millis();
+}
+
+// Update fan control based on time
+void updateFans(Fans &fans, unsigned long currentTime) {
+    const unsigned long intervals[] = {1000, 1000, 1000, 3000}; // On times for FanA, FanB, Both, Off
+    const int outputs[][2] = {{HIGH, LOW}, {LOW, HIGH}, {HIGH, HIGH}, {LOW, LOW}};
+
+    // Change fan states based on time intervals
+    if (currentTime - fans.previousTime >= intervals[fans.state]) {
+        digitalWrite(fans.pinA, outputs[fans.state][0]);
+        digitalWrite(fans.pinB, outputs[fans.state][1]);
+        fans.state = (fans.state + 1) % 4; // Cycle through states
+        fans.previousTime = currentTime;
+    }
+}
+
+// Initialize the water pump controller
+void beginWaterPumpController(WaterPumpController &controller) {
+    pinMode(controller.pin, OUTPUT);
+    controller.previousTime = millis();
+    controller.previousPumpTime = millis();
+}
+
+// Update the water pump status based on water levels and time
+void updateWaterPumpStatus(WaterPumpController &controller, unsigned long currentTime, int waterLevelA, int waterLevelB, int waterLevelC, int waterLevelD) {
+    unsigned long elapsedTime = currentTime - controller.previousTime;
+    unsigned long elapsedPumpTime = currentTime - controller.previousPumpTime;
+
+    if (waterLevelC == LOW) {
+        // Control WaterLevelD based on time
+        digitalWrite(WaterLevelD, (elapsedTime % 600 < 300) ? HIGH : LOW);
+        controller.pumpPWM = 0;
+        analogWrite(controller.pin, controller.pumpPWM);
+    } else if (controller.pumpStatus && (elapsedPumpTime <= controller.pumpTimeOn)) {
+        // Set pump PWM based on water levels
+        if (waterLevelA == HIGH && elapsedTime >= controller.stabilityTime) {
+            controller.pumpPWM = 255;
+        } else if (waterLevelB == HIGH && elapsedTime >= controller.stabilityTime) {
+            controller.pumpPWM = 170;
+        } else if (waterLevelC == HIGH && elapsedTime >= controller.stabilityTime) {
+            controller.pumpPWM = 85;
+        } else if (waterLevelC == LOW && elapsedTime >= controller.stabilityTime) {
+            controller.pumpPWM = 0;
+        }
+        analogWrite(controller.pin, controller.pumpPWM);
+        controller.previousTime = currentTime;
+    } else if (elapsedPumpTime >= controller.pumpTimeOn) {
+        digitalWrite(controller.pin, LOW);
+        controller.pumpStatus = false;
+        controller.previousPumpTime = currentTime;
+    } else if (elapsedPumpTime >= controller.pumpTimeOff) {
+        analogWrite(controller.pin, controller.pumpPWM);
+        controller.pumpStatus = true;
+        controller.previousPumpTime = currentTime;
+    }
+}
+
+// Create instances of the structs
+WaterLevelSensors waterLevelSensors(WaterLevelA, WaterLevelB, WaterLevelC);
+Fans fans(FanA, FanB);
+WaterPumpController waterPumpController(WaterPump);
 
 void setup() {
     Serial.begin(9600);
-    waterLevelSensors.begin();
-    fans.begin();
-    waterPumpController.begin();
+    beginWaterLevelSensors(waterLevelSensors);
+    beginFans(fans);
+    beginWaterPumpController(waterPumpController);
 }
 
 void loop() {
     int waterLevelA, waterLevelB, waterLevelC;
     unsigned long currentTime = millis();
 
-    waterLevelSensors.readLevels(waterLevelA, waterLevelB, waterLevelC);
-    waterPumpController.updatePumpStatus(currentTime, waterLevelA, waterLevelB, waterLevelC, WaterLevelD);
-    fans.update(currentTime);
+    readWaterLevels(waterLevelSensors, waterLevelA, waterLevelB, waterLevelC);
+    updateWaterPumpStatus(waterPumpController, currentTime, waterLevelA, waterLevelB, waterLevelC, WaterLevelD);
+    updateFans(fans, currentTime);
 }
