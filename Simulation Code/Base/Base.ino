@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-// Define the pins for the sensors and components
+// Define the pins for the sensors and component
 const int WaterLevelA = 4;
 const int WaterLevelB = 5;
 const int WaterLevelC = 6;
