@@ -1,142 +1,118 @@
 #include <Arduino.h>
 
-// Define the pins for the sensors and component
+// Define the pins for the water level sensors
 const int WaterLevelA = 4;
 const int WaterLevelB = 5;
 const int WaterLevelC = 6;
 const int WaterLevelD = 7;
+
+// Define the pins for the fans
 const int FanA = 9;
 const int FanB = 10;
-const int WaterPump = 11;
+int FanPWM; // Variable to control the speed of the fans
 
-// Define a structure for water level sensors
-struct WaterLevelSensors {
-    int pinA;
-    int pinB;
-    int pinC;
+// Define the water pump struct
+struct WaterPumpFn {
+    unsigned long previousTime = 0; // Time of the last water level check
+    unsigned long previousPumpTime = 0; // Time of the last pump status check
+    int PumpPWM = 0; // Variable to control the speed of the water pump
+    bool pumpStatus = false; // Pump status (true = on, false = off)
 
-    WaterLevelSensors(int a, int b, int c) : pinA(a), pinB(b), pinC(c) {}
+    const unsigned long stabilityTime = 1000; // Stability time in milliseconds
+    const unsigned long pumpTimeOff = 1000; // Pump off time in milliseconds
+    const unsigned long pumpTimeOn = 5000; // Pump on time in milliseconds
 };
 
-// Define a structure for fan control
-struct Fans {
-    int pinA;
-    int pinB;
-    unsigned long previousTime;
-    int state;
+// Create an instance of the WaterPumpFn struct
+WaterPumpFn waterPump;
 
-    Fans(int aPin, int bPin) : pinA(aPin), pinB(bPin), previousTime(0), state(0) {}
-};
+const int WaterPump = 11; // Pin for the water pump
 
-// Define a structure for water pump control
-struct WaterPumpController {
-    int pin;
-    int pumpPWM;
-    bool pumpStatus;
-    unsigned long previousTime;
-    unsigned long previousPumpTime;
-    const unsigned long stabilityTime;
-    const unsigned long pumpTimeOff;
-    const unsigned long pumpTimeOn;
-
-    WaterPumpController(int p)
-        : pin(p), pumpPWM(0), pumpStatus(false), previousTime(0), previousPumpTime(0),
-          stabilityTime(1000), pumpTimeOff(1000), pumpTimeOn(5000) {}
-};
-
-// Initialize the water level sensors
-void beginWaterLevelSensors(WaterLevelSensors &sensors) {
-    pinMode(sensors.pinA, INPUT);
-    pinMode(sensors.pinB, INPUT);
-    pinMode(sensors.pinC, INPUT);
+void setup() 
+{
+  Serial.begin(9600); // Start the serial communication with the computer
+  // Set the mode of the pins
+  pinMode(WaterLevelA, INPUT);
+  pinMode(WaterLevelB, INPUT);
+  pinMode(WaterLevelC, INPUT);
+  pinMode(WaterLevelD, OUTPUT);
+  pinMode(FanA, OUTPUT);
+  pinMode(FanB, OUTPUT);
+  pinMode(WaterPump, OUTPUT);
 }
 
-// Read water levels from sensors
-void readWaterLevels(WaterLevelSensors &sensors, int &levelA, int &levelB, int &levelC) {
-    levelA = digitalRead(sensors.pinA);
-    levelB = digitalRead(sensors.pinB);
-    levelC = digitalRead(sensors.pinC);
+// Function to check the current water level
+void checkWaterLevel(int &waterLevelA, int &waterLevelB, int &waterLevelC) 
+{
+  // Read the value of the water level sensors
+  waterLevelA = digitalRead(WaterLevelA);
+  waterLevelB = digitalRead(WaterLevelB);
+  waterLevelC = digitalRead(WaterLevelC);
 }
 
-// Initialize the fans
-void beginFans(Fans &fans) {
-    pinMode(fans.pinA, OUTPUT);
-    pinMode(fans.pinB, OUTPUT);
-    fans.previousTime = millis();
-}
-
-// Update fan control based on time
-void updateFans(Fans &fans, unsigned long currentTime) {
-    const unsigned long intervals[] = {1000, 1000, 1000, 3000}; // On times for FanA, FanB, Both, Off
-    const int outputs[][2] = {{HIGH, LOW}, {LOW, HIGH}, {HIGH, HIGH}, {LOW, LOW}};
-
-    // Change fan states based on time intervals
-    if (currentTime - fans.previousTime >= intervals[fans.state]) {
-        digitalWrite(fans.pinA, outputs[fans.state][0]);
-        digitalWrite(fans.pinB, outputs[fans.state][1]);
-        fans.state = (fans.state + 1) % 4; // Cycle through states
-        fans.previousTime = currentTime;
+// Function to check and update the status of the pump
+void checkPumpStatus(WaterPumpFn &waterPump, unsigned long &currentTime, unsigned long &elapsedTime, 
+unsigned long &currentPumpTime, unsigned long &elapsedPumpTime, int waterLevelA, 
+int waterLevelB, int waterLevelC) 
+{
+  currentTime = millis(); // Get the current time
+  elapsedTime = currentTime - waterPump.previousTime; // Calculate elapsed time since last water level check
+  currentPumpTime = millis(); // Get the current time for the pump
+  elapsedPumpTime = currentPumpTime - waterPump.previousPumpTime; // Calculate elapsed time since last pump status check
+  
+  if (waterLevelC == LOW)
+  {
+    digitalWrite(WaterLevelD,HIGH);
+    delay(300);
+    digitalWrite(WaterLevelD,LOW);
+    delay(300);
+    waterPump.PumpPWM = 0;
+    analogWrite(WaterPump, waterPump.PumpPWM);
+  }
+  else if ((waterPump.pumpStatus) && (elapsedPumpTime <= waterPump.pumpTimeOn)) // Pump is on and within on-time
+  {
+    if ((waterLevelA == HIGH) && (elapsedTime >= waterPump.stabilityTime))
+    {
+      waterPump.PumpPWM = 255; // Set pump speed to maximum
+      waterPump.previousTime = currentTime; // Update last water level check time
     }
-}
-
-// Initialize the water pump controller
-void beginWaterPumpController(WaterPumpController &controller) {
-    pinMode(controller.pin, OUTPUT);
-    controller.previousTime = millis();
-    controller.previousPumpTime = millis();
-}
-
-// Update the water pump status based on water levels and time
-void updateWaterPumpStatus(WaterPumpController &controller, unsigned long currentTime, int waterLevelA, int waterLevelB, int waterLevelC, int waterLevelD) {
-    unsigned long elapsedTime = currentTime - controller.previousTime;
-    unsigned long elapsedPumpTime = currentTime - controller.previousPumpTime;
-
-    if (waterLevelC == LOW) {
-        // Control WaterLevelD based on time
-        digitalWrite(WaterLevelD, (elapsedTime % 600 < 300) ? HIGH : LOW);
-        controller.pumpPWM = 0;
-        analogWrite(controller.pin, controller.pumpPWM);
-    } else if (controller.pumpStatus && (elapsedPumpTime <= controller.pumpTimeOn)) {
-        // Set pump PWM based on water levels
-        if (waterLevelA == HIGH && elapsedTime >= controller.stabilityTime) {
-            controller.pumpPWM = 255;
-        } else if (waterLevelB == HIGH && elapsedTime >= controller.stabilityTime) {
-            controller.pumpPWM = 170;
-        } else if (waterLevelC == HIGH && elapsedTime >= controller.stabilityTime) {
-            controller.pumpPWM = 85;
-        } else if (waterLevelC == LOW && elapsedTime >= controller.stabilityTime) {
-            controller.pumpPWM = 0;
-        }
-        analogWrite(controller.pin, controller.pumpPWM);
-        controller.previousTime = currentTime;
-    } else if (elapsedPumpTime >= controller.pumpTimeOn) {
-        digitalWrite(controller.pin, LOW);
-        controller.pumpStatus = false;
-        controller.previousPumpTime = currentTime;
-    } else if (elapsedPumpTime >= controller.pumpTimeOff) {
-        analogWrite(controller.pin, controller.pumpPWM);
-        controller.pumpStatus = true;
-        controller.previousPumpTime = currentTime;
+    else if ((waterLevelB == HIGH) && (elapsedTime >= waterPump.stabilityTime))
+    {
+      waterPump.PumpPWM = 170; // Set pump speed to medium-high
+      waterPump.previousTime = currentTime; // Update last water level check time
     }
+    else if ((waterLevelC == HIGH) && (elapsedTime >= waterPump.stabilityTime))
+    {
+      waterPump.PumpPWM = 85; // Set pump speed to medium-low
+      waterPump.previousTime = currentTime; // Update last water level check time
+    }
+    else if ((waterLevelC == LOW) && (elapsedTime >= waterPump.stabilityTime))
+    {
+      waterPump.PumpPWM = 0; // Turn off the pump
+      waterPump.previousTime = currentTime; // Update last water level check time
+    }
+    analogWrite(WaterPump, waterPump.PumpPWM); // Apply the new pump speed
+  }
+  else if (elapsedPumpTime >= waterPump.pumpTimeOn) // Pump on-time exceeded
+  {
+    digitalWrite(WaterPump, LOW); // Turn off the pump
+    waterPump.pumpStatus = false; // Update pump status
+    waterPump.previousPumpTime = currentPumpTime; // Update last pump status check time
+  }
+  else if (elapsedPumpTime >= waterPump.pumpTimeOff)// Pump off-time exceeded
+  {
+    analogWrite(WaterPump, waterPump.PumpPWM); // Turn on the pump
+    waterPump.pumpStatus = true; // Update pump status
+    waterPump.previousPumpTime = currentPumpTime; // Update last pump status check time
+  }
 }
 
-// Create instances of the structs
-WaterLevelSensors waterLevelSensors(WaterLevelA, WaterLevelB, WaterLevelC);
-Fans fans(FanA, FanB);
-WaterPumpController waterPumpController(WaterPump);
+void loop() 
+{
+  int waterLevelA, waterLevelB, waterLevelC; // Variables to store the current water level
+  unsigned long currentTime, elapsedTime, currentPumpTime, elapsedPumpTime; // Variables to store the current time and elapsed time
 
-void setup() {
-    Serial.begin(9600);
-    beginWaterLevelSensors(waterLevelSensors);
-    beginFans(fans);
-    beginWaterPumpController(waterPumpController);
-}
-
-void loop() {
-    int waterLevelA, waterLevelB, waterLevelC;
-    unsigned long currentTime = millis();
-
-    readWaterLevels(waterLevelSensors, waterLevelA, waterLevelB, waterLevelC);
-    updateWaterPumpStatus(waterPumpController, currentTime, waterLevelA, waterLevelB, waterLevelC, WaterLevelD);
-    updateFans(fans, currentTime);
+  checkWaterLevel(waterLevelA, waterLevelB, waterLevelC); // Check the current water level
+  checkPumpStatus(waterPump, currentTime, elapsedTime, currentPumpTime, elapsedPumpTime, 
+  waterLevelA, waterLevelB, waterLevelC); // Check and update the pump status
 }
