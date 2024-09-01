@@ -8,6 +8,8 @@
 const int SensorA = 5;
 const int SensorB = 6;
 const int SensorC = 7;
+const int test = 8;
+// 
 
 void setup()
 {
@@ -15,6 +17,7 @@ void setup()
   pinMode(SensorA, INPUT);
   pinMode(SensorB, INPUT);
   pinMode(SensorC, INPUT);
+  pinMode(test, OUTPUT);
 }
 
 void loop()
@@ -22,6 +25,7 @@ void loop()
   int readingA = digitalRead(SensorA);
   int readingB = digitalRead(SensorB);
   int readingC = digitalRead(SensorC);
+  digitalWrite(test, HIGH);
 
   if (readingA == LOW && readingB == LOW && readingC == LOW)
   {

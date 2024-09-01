@@ -1,37 +1,43 @@
 #include <Arduino.h>
-#include "base.h"
+#include "checkPumpStatus.h"
+
+CheckPumpStatus::CheckPumpStatus() {
+  unsigned long previousTime = 0; 
+  unsigned long previousPumpTime = 0;
+  bool pumpStatus = false; 
+  int PumpPWM = 0;
+}
 
 // Function to check and update the status of the pump
-void Base::checkPumpStatus(unsigned long currentTime, unsigned long elapsedTime, 
-unsigned long currentPumpTime, unsigned long elapsedPumpTime)
-{ 
-  if (static_cast<int>(WaterLevel::WaterLevelC) == LOW)
+void CheckPumpStatus::checkPumpStatus(unsigned long &currentTime, unsigned long &elapsedTime, 
+        unsigned long &currentPumpTime, unsigned long &elapsedPumpTime, int &waterLevelA, int &waterLevelB, int &waterLevelC, int &waterLevelD) { 
+  if (waterLevelC == LOW)
   {
-    digitalWrite(static_cast<int>(WaterLevel::WaterLevelD),HIGH);
+    digitalWrite(waterLevelD,HIGH);
     delay(300);
-    digitalWrite(static_cast<int>(WaterLevel::WaterLevelD),LOW);
+    digitalWrite(waterLevelD,LOW);
     delay(300);
-    analogWrite(static_cast<int>(WaterPumpConst::waterpumpval), PumpPWM);
+    analogWrite(static_cast<int>(WaterPumpConst::waterpumpval), this->PumpPWM);
   }
   else if ((this->pumpStatus) && (elapsedPumpTime <= static_cast<int>(WaterPumpConst::pumpTimeOn))) // If the pump is currently on and has been on for less than the specified on time
   {
     // Check the water level and adjust the pump speed accordingly
-    if ((static_cast<int>(WaterLevel::WaterLevelA) == HIGH) && (elapsedTime >= static_cast<int>(WaterPumpConst::stabilityTime)))
+    if ((waterLevelA == HIGH) && (elapsedTime >= static_cast<int>(WaterPumpConst::stabilityTime)))
     {
       this->PumpPWM = 255; // Set the pump speed to maximum
       this->previousTime = currentTime; // Update the time of the last water level check
     }
-    else if ((static_cast<int>(WaterLevel::WaterLevelB) == HIGH) && (elapsedTime >= static_cast<int>(WaterPumpConst::stabilityTime)))
+    else if ((waterLevelB == HIGH) && (elapsedTime >= static_cast<int>(WaterPumpConst::stabilityTime)))
     {
       this->PumpPWM = 170; // Set the pump speed to medium-high
       this->previousTime = currentTime; // Update the time of the last water level check
     }
-    else if ((static_cast<int>(WaterLevel::WaterLevelC) == HIGH) && (elapsedTime >= static_cast<int>(WaterPumpConst::stabilityTime)))
+    else if ((waterLevelC == HIGH) && (elapsedTime >= static_cast<int>(WaterPumpConst::stabilityTime)))
     {
       this->PumpPWM = 85; // Set the pump speed to medium-low
       this->previousTime = currentTime; // Update the time of the last water level check
     }
-    else if ((static_cast<int>(WaterLevel::WaterLevelC) == LOW) && (elapsedTime >= static_cast<int>(WaterPumpConst::stabilityTime)))
+    else if ((waterLevelC == LOW) && (elapsedTime >= static_cast<int>(WaterPumpConst::stabilityTime)))
     {
       this->PumpPWM = 0; // Turn off the pump
       this->previousTime = currentTime; // Update the time of the last water level check

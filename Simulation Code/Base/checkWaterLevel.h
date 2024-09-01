@@ -7,7 +7,8 @@ class CheckWaterLevel {
         CheckWaterLevel();
 
         // Function to check the current water level
-        void checkWaterLevel();
+        void checkWaterLevel(int &waterLevelA, int &waterLevelB, int &waterLevelC, int &waterLevelD);
+
         // Define the pins for the water level sensors
         enum class WaterLevel {
             WaterLevelA = 4,
@@ -15,6 +16,6 @@ class CheckWaterLevel {
             WaterLevelC = 6,
             WaterLevelD = 7
         };
-}
+};
 
 #endif

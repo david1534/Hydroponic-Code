@@ -1,14 +1,14 @@
 #include <Arduino.h>
-#ifndef BASE_H
-#define BASE_H
+#ifndef CHECKPUMPSTATUS_H
+#define CHECKPUMPSTATUS_H
 
 class CheckPumpStatus {
     public:
         CheckPumpStatus();
 
         // Function to check and update the status of the pump
-        void checkPumpStatus(unsigned long currentTime, unsigned long elapsedTime, 
-        unsigned long currentPumpTime, unsigned long elapsedPumpTime);
+        void checkPumpStatus(unsigned long &currentTime, unsigned long &elapsedTime, 
+        unsigned long &currentPumpTime, unsigned long &elapsedPumpTime, int &waterLevelA, int &waterLevelB, int &waterLevelC, int &waterLevelD);
 
         // Define the variables for the water pump
         enum class WaterPumpConst {
@@ -18,10 +18,10 @@ class CheckPumpStatus {
             waterpumpval = 11, // Pin for the water pump
         };
 
-        unsigned long previousTime = 0; // Variable to store the last time the water level was checked
-        unsigned long previousPumpTime = 0; // Variable to store the last time the pump status was checked
-        bool pumpStatus = false; // Variable to store the current status of the pump (true = on, false = off)
-        int PumpPWM = 0; // Variable to control the speed of the water pump
+        unsigned long previousTime; // Variable to store the last time the water level was checked
+        unsigned long previousPumpTime; // Variable to store the last time the pump status was checked
+        bool pumpStatus; // Variable to store the current status of the pump (true = on, false = off)
+        int PumpPWM; // Variable to control the speed of the water pump
 };
 
 #endif
