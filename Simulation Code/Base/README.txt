@@ -31,4 +31,4 @@ is used to apply the new pump speed, and the digitalWrite() function is used to 
 and off. The pumpStatus variable is updated to reflect the current status of the pump. The 
 previousTime and previousPumpTime variables are updated to store the current time. The loop() 
 function continuously calls the checkWaterLevel() and checkPumpStatus() functions to monitor the 
-water level and control the pump.
+water level and control the pump.a

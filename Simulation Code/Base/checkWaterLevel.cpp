@@ -1,10 +1,9 @@
-// checkWaterLevel.cpp
 #include "checkWaterLevel.h"
-#include <Arduino.h> // Include Arduino library for functions like digitalRead()
+#include <Arduino.h>
 
-void checkWaterLevel(int waterLevelA, int waterLevelB, int waterLevelC) {
-    // Read the value of the water level sensors
-    digitalRead(waterLevelA);
-    digitalRead(waterLevelB);
-    digitalRead(waterLevelC);
+void checkWaterLevel(WaterLevelSensors &sensors) {
+  // Read the value of the water level sensors and store them in the struct
+  sensors.waterLevelA = digitalRead(sensors.WaterPinA);
+  sensors.waterLevelB = digitalRead(sensors.WaterPinB);
+  sensors.waterLevelC = digitalRead(sensors.WaterPinC);
 }
